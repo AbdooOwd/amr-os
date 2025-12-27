@@ -57,11 +57,14 @@ the Rust OS blog I'm following:
 When running `cargo build`, even with our sweet `#![no_std]`,
 cargo thinks we're building for our platfrom/target.
 In my case: `x86_64-unknown-linux-gnu`. The architecture is `x86_64`,
-the vendor is unknown, and the ABI is `gnu`.
-But our OS... can't compile on top of... an OS? Or else how would
-it be an OS?
+`linux` is the system, the vendor is unknown, and the ABI is `gnu`.
+But our OS... can't compile on top of... an OS? Like,
+making an OS--an independent component of the computer--that relies on
+Linux? Another OS? It's like saying crafting wood out of wood.
+How would it be an OS? The core/brain of our system!
 In other terms: We want our OS' compilation (I think that's a correct way to put it) to be independent from our environment (the OS we're using).
 In my case, `cargo` will try building to Linux in the x86_64.
+(again: running an OS from an OS?)
 
 So instead, we'll use a target that doesn't use or depend on any OS,
 which is the one proposed by Philipp Oppermann in his RustOS blog:
@@ -70,9 +73,40 @@ I should search about it, and it just doesn't have an underlying OS.
 
 ### Rust-Analyzer shall be happy!
 
-Because of a setting for RustAnalyzer `cargo.allTargets`, Cargo
+Because of a setting for RustAnalyzer (`cargo.allTargets`), Cargo
 thinks the "package" (our project) *could* be a library OR a binary
 (a "package" target?).
 And the real reason RustAnalyzer wasn't too happy for some code I wrote
-in a `no_std` environment is that it think I will use benching and testing
+in a `no_std` environment is that it thinks I will use benching and testing
 --thus we disable them in `Cargo.toml`.
+
+### Huh? Custom target?
+
+So, we were using that other target that didn't depend on an OS.
+But, we would like to be able to specify how this target behaves
+or give its specifications.
+Thus, I ~~copy pasted from os.phil-opp.com~~ wrote the specifications
+of an average x86_64 OS (i think) and just called it
+`x86_64-amr_os.json`.
+
+I have also switched my Rust compiler's build to `nightly` to access some
+features we require, like building some `std` stuff like `core` for our
+new target. A new file, `.cargo/config.toml`, was required to configure
+that std-recompilation stuff.
+
+We need to recompile `core` and its dependencies from `compiler_builtins`
+in order to use the essentials of Rust (the `Result` type, `PanicHandler`...).
+We also enable some feature called `compiler-builtins-mem` which enable
+some memory functions that should be included in the C-runtime by default,
+like `memset`, `memcpy`, `memcmp`.
+They are already provided by `compiler_builtins`, but disabled by default
+to avoid any conflict with the C-runtime (not our case).
+All of this because Rust assumes it can use these memory functions,
+plus some features use them.
+We **could** code our own memory functions and stick a `#[unsafe(no_manlge)]`,
+but this isn't very safe, nor smart. Like, imagine using something
+that uses a memory function while we're trying to write a memory function.
+
+Finally, instead of doing `cargo build --target specs/x86_64-amr_os.json`
+every time I want to use my target, which I'll use, like, <u>**always**</u>;
+we'll set it as our default target.
