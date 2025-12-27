@@ -62,7 +62,8 @@ But our OS... can't compile on top of... an OS? Like,
 making an OS--an independent component of the computer--that relies on
 Linux? Another OS? It's like saying crafting wood out of wood.
 How would it be an OS? The core/brain of our system!
-In other terms: We want our OS' compilation (I think that's a correct way to put it) to be independent from our environment (the OS we're using).
+In other terms: We want our OS' compilation (I think that's a correct way to put it)
+to be independent from our environment (the OS we're using).
 In my case, `cargo` will try building to Linux in the x86_64.
 (again: running an OS from an OS?)
 
@@ -110,3 +111,89 @@ that uses a memory function while we're trying to write a memory function.
 Finally, instead of doing `cargo build --target specs/x86_64-amr_os.json`
 every time I want to use my target, which I'll use, like, <u>**always**</u>;
 we'll set it as our default target.
+
+### Am I really learning?
+
+Because of all the dog-water of Rust being too strict (which is good,
+we just don't want to admit it), I feel like every part of making an OS
+with that language is 13% of implementation and 102% of trying to satisfy
+Rust.
+Yes; satisfying Rust means satisfying the computer with *safety*.
+But **ARGH**!
+
+*\*thinks\**
+
+As a matter of fact, maybe it's just me who's not good enough at Rust yet (fact).
+But I gotta express that our guy Philipp uses way, WAY too much crates.
+It's a few, yes. But for me & my goals it feels like a lot, and it's pretty annoying.
+I do know that if I try implementing even the simplest thing in Rust by myself
+I would break something. Thus using a crate is just a mean to an end which is:
+making an Operating System.
+
+...
+
+Why did I want to use Rust again? Ah yeah, right: the safety and the forced "Clean Code".
+Well, I'm the genius who decided to start an <u>**Operating System**</u> in **Rust**--a language
+I do not master or even am proficient/efficient with.
+
+And all that talk from the OSDev Wiki just saying:
+"You know it's pretty hard"
+"If you're not ready don't start such a project"
+"Actually, your OS-project is stoopid".
+
+There are a some stuff said on the wiki that feels pretty honest: the fact that
+making an OS is no easy task--and I did know that, and I just told myself
+"meh who cares I'll improve in the process".
+
+But on this same wiki, there are grains of... gate-keeping.
+It sometimes feel like some OSDev folks just don't want you to touch OSDev.
+- I'm gonna break something? Well, as long as I don't damage any computer: who care!?
+- I'm gonna write the worst code ever written by someone? As long as the people working
+  with you are fine or you work alone: who cares?!
+
+I'm not planning on making the next Linux or Windows!
+
+### ALRIGHT
+
+Alright, it's like, the 27th of December. It's 2AM. I guess I'll continue
+to look into this OSDev stuff some other time.
+
+So far, my tasks are:
+- Finding the Rust skills I lack.
+- Learn more about OSDev and the beginning of an OS' start
+  so I don't rely too much on the Phil-Opp blog.
+- Find out if it's even worth it writing this OS in Rust!
+  * Especially because of how essential crates look in this project
+    (I refuse to! Maybe, I'll use and give up to those crates.
+    But I want my own software written!).
+- Maybe finding another kind of project to work on resembling this kind.
+- List out the OS' stuff I must work on.
+- Find a way to convert any OS
+  knowledge I gain online into code--not relying on some already written
+  code with some explanation then calling it a day saying "Alright I get it"
+  when I don't.
+- Prioritize understanding & explanation!
+
+... I already feel lazy to continue this project...
+I HAVEN'T EVEN IMPLEMENTED A WAY TO PRINT TEXT YET! I HAVEN'T EVEN
+WRITTEN A "Hello, World!" YET! AND I AM ALREADY FEELING LIKE:
+"this is annoying and boring"!
+
+> I literally had to wait a week--or 7 days to work on this project.
+  I was so excited to **START** working on it!
+
+### (literally 4 minutes later when I was finally going to bed)
+
+You know, I just re-read a few bits of the Phil-Opp blog and...
+It really, REALLY feels like Rust is living in the shadow of C
+in matters of OSDev!
+Like: "we extern this to imitate C", "we use C calling convention",
+"Rust relays on the C-runtime", "We add `repr(C)` to imitate a C struc-"
+**AAAAAARRRRRRGHHHHHHHH!!!!!!! STOP! ENOUGH!**
+
+**YES! YES RUST ISN'T AS MATURE AS C! YES C IS LITERALLY THE FOUNDATION
+OF COMPUTERS, SOFTWARES N' ALL THAT!**
+
+**BUT ARGH!<br/>ARGH!**<br/>
+**"USE THOSE CRATES", "DON'T WRITE THERE", "ACTUALLY, LET's ASK
+BABA C"**
