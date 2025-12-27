@@ -1,4 +1,10 @@
 all: build
 
 build:
-	cargo build
+	cargo bootimage
+
+run: build
+	cargo run
+
+clean:
+	cargo clean

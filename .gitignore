@@ -1,1 +1,8 @@
 /target
+
+# my stuff
+
+# in case I want to have different compiled/built files
+# in a single directory (currently useless)
+build/
+

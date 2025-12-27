@@ -197,3 +197,107 @@ OF COMPUTERS, SOFTWARES N' ALL THAT!**
 **BUT ARGH!<br/>ARGH!**<br/>
 **"USE THOSE CRATES", "DON'T WRITE THERE", "ACTUALLY, LET's ASK
 BABA C"**
+
+
+## [27/12/2025]
+
+### Dear me: rely on yourself!
+
+So, I have tried compiling my OS to print some text to the screen by writing
+to the VGA text buffer at `0xb8000`. **BUT** (there is always a but):
+the blog I'm following recommends using the `bootloader` package/crate/idk,
+and install `bootimage` for cargo to be able to compile our OS by sticking a bootloader
+to our compiled kernel.
+
+Now: `bootloader` definitely relies on `std`. Because everytime I try compiling
+I have these, sweet, error messages:
+```
+error: could not compile `serde_core` (lib) due to 5829 previous errors
+```
+
+Excuse me? 64 packages? Nuh uh. Our dear `serde_core` doesn't want to let us
+compile peacefully. What is it? It's some kind of JSON library.
+It's probably used to read some config, maybe.
+But for now my issue is sticking a bootloader to my kernel.
+
+Now that I think about it... I *could* just write something simple in Assembly, but:
+1.  Writing a bootloader can be a pain in the neck.
+2.  I will have to code from scratch the transition from 16-bit real-mode to 32-bit
+    protected-mode, THEN try to enter 64-bit long-mode.
+
+At the same time, having your kernel rely on code **YOU** wrote is: ***ahhhh***.
+
+Our other solution would be looking for a way to tinker with an already existing
+bootloader and try linking it to our kernel. I think the second option option could
+be a win for me. Maybe I could just look into those `bootimage` and `bootloader`
+and try to find a way to satisfy them and their dependencies.
+
+### Let's break things down
+
+The best way to understand a problem is understanding what we're really trying to do
+then trying to understand what we have coded. This concept, if you have a rubber-duck
+on your desk, is called: *"Rubber Ducking"*.
+It means talking about almost anything that's related to our current problem or code
+in order to achieve some goal(s) like understanding the codebase better and tracking down
+a bug or problem.
+
+So let's do something similar: **what are we doing?**
+
+First of all, we have abandoned the `main` function and `std`--Rust's standard library.
+Because Rust relies on the C-runtime-zero (crt0), our usual user-space Rust programs
+are started by the C-runtime which initializes some stuff like the stack and all,
+then starts Rust's runtime stuff (which is minimal) like backtrace on panic,
+stack overflow guards...etc.
+C starts the Rust part by calling a function called `start`.
+We have implemented this function and called it `_start`.
+We made sure it's name wasn't changed or replaced by a randomly generated
+unique one by using `#[unsafe(no_mangle)]`.
+We then made this function use the C calling convention (some stuff to be able
+to call a function from other languages and binaries, I think. Like some kind
+tunnel between languages in terms of functions through its names or idk).
+
+That `_start` function has the return type of `!` which means the function
+should never be returned from. See the C-runtime calling `start` as a `goto`--just
+entering the function, not expecting anything in return.
+
+> It's definitely different from the `()` type in Rust. I should check about that.
+
+Rust requires a "panic" function which should be run when, you guessed it: panicking.
+That's why we replace Rust's default panic handler with ours.
+At the time I'm writing this, my panic handler doesn't do anything. It just serves
+as code Rust should go to when something goes wrong.
+When I'll be able to write some text to the screen, I'll be able to output the error
+or backtrace which would be much more appropriate for a panic handler.
+
+We have made modifications to our Rust code to specify how we are coding.
+But `cargo` doesn't know anything about us coding an OS! Meaning it doesn't know
+we are in a bare-metal environment! Thus, we must specify that **we** are going to handle panic.
+We also must configure `cargo` at `.cargo/config.toml` to specify our target and the libraries/crates
+we must recompile to our target.
+For example: my current cargo configuration specifies that we must recompile `core` and its dependencies
+from `compiler_builtins`.
+This requires the <u>nightly</u> build of Rust.
+
+Our target's specifications are in `specs/x86_64-amr_os.json`.
+I don't quite understand it all yet so I'll skip it for now.
+
+Finally, the thing we're stuck at; the bootloader a.k.a how to boot our kernel.
+Because so far, we have just coded a really minimal kernel!
+I could write my own bootloader in Assembly and all, but I might do it some other time.
+For now, I'd like to rely on a good external bootloader that would be linked to our kernel,
+allowing our OS to boot:
+I could write my own bootloader in Assembly and all, but I might do it some other time.
+For now, I'd like to rely on a good external bootloader that would be linked to our kernel,
+allowing our OS to boot.
+
+If I look back at the Phil-Opp blog; the only thing I'm not respecting is the version of
+the `bootloader` crate/package and `bootimage`.
+
+### It was the version.
+
+So, uh, heheh, *cough **cough***. So, uhhh, I installed the latest version version of `bootloader`
+(at the time I'm writing its `0.11`). But getting the version `0.9` fixes <u>**EVERYTHING**</u>.
+
+Anyways, the OS now compiles and I can run it in QEMU. AND I can run my OS by simply doing
+`cargo run`.
+Everything is cool so far!
