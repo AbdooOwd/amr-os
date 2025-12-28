@@ -301,3 +301,133 @@ So, uh, heheh, *cough **cough***. So, uhhh, I installed the latest version versi
 Anyways, the OS now compiles and I can run it in QEMU. AND I can run my OS by simply doing
 `cargo run`.
 Everything is cool so far!
+
+
+## [28/12/2025]
+
+### VGA Buffer Stuff
+
+Yesterday I wrote some print and VGA-Buffer manipulation functions that I forgot
+to log here (oops). I now have some very useful functions! Like `write_byte` to
+write a specific byte to a specific spot, a wrapper for `write_byte` called
+`print_char_at`, and other functions like `print_string_at` and `print_string`.
+
+My VGA "interface" (i don't know if I can call it so) works pretty simply:
+We have a `Writer` type which is responsible for handling interactions with
+the VGA-Buffer (all the functions I mentioned previously are implementations
+of this struct). It needs to be initialized in order to be used.
+
+`Writer` is composed of three values which consist of its column position,
+color scheme to use on characters to print, and finally: the buffer.
+When initialized, the writer's buffer address is set to `0xB8000` which is
+the address of the VGA buffer.
+Setting the buffer's address is unsafe, as Rust cannot predict what lies at
+this address, nor what happens around it, or anything else.
+So we <u>must</u> use the `unsafe` keyword.
+
+---
+
+Previously, the writer's `Buffer` looked like this:
+```rust
+struct Buffer {
+    chars: [[CharCell; BUFFER_WIDTH]; BUFFER_HEIGHT]
+}
+```
+
+It now looks like this:
+
+```rust
+struct Buffer {
+    chars: [[Volatile<CharCell>; BUFFER_WIDTH]; BUFFER_HEIGHT]
+}
+```
+
+Notice the difference in the `Volatile` we added. Apparently, Rust could become
+too excited and try to optimize our OS as much as possible.
+Noticing that we're only writing to the buffer and not reading from it,
+Rust will assume this variable is useless. Thus removing any code involving
+writing to that buffer.
+But it's logical for us to not read from it--it's a video buffer! We're displaying
+to the screen!
+I don't see a situation in which I would like to extract what's written in the buffer
+which I, the developer, didn't explicitly intend to print.
+
+### Implementing macros for `Writer`
+
+Being able to use `print_string` is pretty cool. But the real purpose of such a function
+is displaying in formation! And a lot of information can't be pre-wrote (i.e wrote before
+compilation) cuz there are dynamic infos!
+
+Ok enough nonsense: What I mean is that I should be able to print formatted strings that can
+display values and variables' values. I could code a `printf` function similar to what I did
+in my previous OS attempts in C. Or I could just Yank an open-source `printf` implementation
+for embedded-systems or freestanding/bare-metal software from GitHub.
+But our guy Phil-Opp suggested just adding an implementation of `fmt::Write` for `Writer`.
+I do **not** understand how "implementation for" works in Rust:
+
+```rust
+impl <implemenation> for <idk> {
+  /* ... */
+}
+```
+
+Oh, well. At least I can write in a formatted way now using the `write!` macro.
+Though, it's annoying having to stick a `.unwrap()` at the end of each use.
+It's literally said in the blog:
+
+***"The `write!` call returns a `Result` which causes a warning if not used,
+so we call the `unwrap` function on it, which panics if an error occurs.
+This isn’t a problem in our case, since writes to the VGA buffer never fail."***
+
+Thus, I think I might just implement some wrapper for `write!` which doesn't
+expect `Result` as a return type.
+
+### Handling new lines
+
+So far, a new line just means incrementing by 1 the row position (vertical) and reset
+the column position (horizontal) to 0.
+I'd like to be able to support returning to line in a fancier way (probably useless, but fancy, maybe).
+For now, what my `Writer` sees as a new line is really just a fusion betweenthe new-line character `\n`
+and the carriage-return character `\r`.
+
+By fancy line-returns I mean this: Imagine you're using the `print_string_at` function
+and you're printing at, let's say, column 12 and row 5.
+The characters should start printing from left to right starting from the 12th column.
+When encountering a new-line character `\n`, the cursor sets it position to the 12th column
+and the 6th row. Get the picture? My current implementation would just return to
+first column in the screen.
+Or imagine you're using the character printing functions (`print_char_at` and `print_char`) and you'd like*
+to do something like this:
+
+```rust
+print_char_at(b'S', 15, 10);
+print_char(b'\n');
+print_char(b'A');
+```
+
+What I'd like to happen is the 'S' printing at the 15th column and the 10th row,
+then returning to the 15th column and go to the 11th row.
+But instead, what will happen with the current code is going to the 16th column
+if the 11th row.
+
+I could just modify the `write_byte` function to increment the row position by one
+and to not advance the cursor horizontally.
+But this would lead to issues in the string printing functions, in which a new-line
+with this suggested implementation would result in the new line start at the printed string's
+last letter's position minus 1.
+
+> Note to myself: I should implement that thing when some text overflows to the right
+  so in order to not overwrite the line below it we instead push the lines below
+  like terminals do.
+
+### Too much fancying...
+
+I think I have spent way too much time trying to make cool printing functions which
+I'll probably rarely or never use. Like, seriously; writing a function to efficiently
+display a text at the left, center or right of the screen, all while respecting lines-alignment
+and trying to center the text based on the length of the longest line.
+
+If I **EVER** have to do that, it's the user-space program that will handle that--my VGA interface's
+only job is displaying text with a few helper functions. That's it.
+
+So I will stop stupid-ing around and get some real stuff going.
