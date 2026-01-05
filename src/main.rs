@@ -15,6 +15,7 @@ pub extern "C" fn _start() -> ! {
     WRITER.lock().print_string_hcenter(AMROS_HEADER_MSG, 0);
     // reset the cursor position because of the header message
     WRITER.lock().cursor_set_position(0, 2);
+    println!("Hello, {}!", "`println!`");
 
     loop {}
 
