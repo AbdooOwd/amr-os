@@ -489,3 +489,33 @@ pub struct Writer {
     buffer: &'static mut Buffer
 }
 ```
+
+### Oops: recursive
+
+So, I was testing the screen's scroll and... it... was weird.
+
+> *"Alright, now it should scro- wait wait wait calm down calm down **CALM DO-**"*
+
+The scrolling instead scrolled infinitely while clearing the screen, **infinitely**.
+Turns out it was because things became <u>recursive</u>.
+
+Here's how the `scroll` functions works:
+For every row except the first one (row 0), each column's `CharCell` is copied
+to the same column of the row above the currently computed row.
+The problem arises at using the `write_byte` function to write the character at
+its new position, while `scroll` is called by that `write_byte` function,
+which by its turn will call `scroll`, etc...
+
+So now, instead, we do:
+```rust
+self.buffer.chars[row - 1][col].write(character);
+```
+
+But the scrolling was still infinite. Why? Because inside of `scroll`,
+I used `clear_line`, which used `write_byte`, which used `scroll`... haha.
+So, after fixing it the same way and doing:
+```rust
+self.buffer.chars[row][i].write( CharCell { character: b' ', color: self.color_scheme });
+```
+
+Like this, scrolling shall be fixed (and it is)!

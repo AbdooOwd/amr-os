@@ -105,7 +105,7 @@ impl Writer {
 
     pub fn clear_line(&mut self, row: usize) {
         for i in 0..BUFFER_WIDTH {
-            self.write_byte(b' ', i, row);
+            self.buffer.chars[row][i].write( CharCell { character: b' ', color: self.color_scheme });
         }
     }
 
@@ -118,8 +118,8 @@ impl Writer {
     pub fn scroll(&mut self) {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
-                let byte = self.buffer.chars[row][col].read().character;
-                self.write_byte(byte, col, row - 1);
+                let character = self.buffer.chars[row][col].read();
+                self.buffer.chars[row - 1][col].write(character);
             }
         }
         self.clear_line(BUFFER_HEIGHT - 1);

@@ -16,10 +16,6 @@ pub extern "C" fn _start() -> ! {
     // reset the cursor position because of the header message
     WRITER.lock().cursor_set_position(0, 2);
 
-    for i in 0..100 {
-        writeln!(WRITER.lock(), "line {i}").unwrap();
-    }
-
     loop {}
 
     // for now we loop. in the future we should
