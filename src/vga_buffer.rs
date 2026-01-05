@@ -1,10 +1,18 @@
 // TODO: give this file another name
 
 use core::fmt;
-
 use volatile::Volatile;
+use lazy_static::lazy_static;
+use spin::Mutex;
 
 use crate::types::HAlignment;
+
+
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(
+        Writer::new(ColorCode::new(Color::White, Color::Black))
+    );
+}
 
 // I doubt we'll ever use any other address/buffer.
 // Thus, let's just make this the default for the Writer.
@@ -66,25 +74,6 @@ pub struct Writer {
     /** Keeps track of the horizontal position of the *imaginary* cursor */
     col_position: usize, 
     row_position: usize,
-    /**
-    *   This one is tricky:
-    *   There multiple contexts when printing a new-line.
-    *   Maybe we're printing a character at a specific position and we'd like
-    *   to return to the column we started printing from when encountering
-    *   a new-line character.
-    *   Maybe we're printing a string at another position and we'd like to have
-    *   our new line starting horizontally at where the previous line started.
-    *
-    *   So this variable is used to keep track of the column position the function
-    *   started printing from. All for the purpose of correct new-lines...
-    *
-    *   It's of type `Option` to check if `write_byte` is being used or not.
-    *   If it is then this variable's value is `None`.
-    *   Other functions must set this variable to something before using any
-    *   internal print function like `print_char` or `write_byte`, then when done
-    *   set the value back to `None`.
-    */
-    col_start: Option<usize>,
     /** Color used by everything printed by this writer */
     color_scheme: ColorCode, 
     buffer: &'static mut Buffer
@@ -96,19 +85,27 @@ impl Writer {
         Writer {
             col_position: 0,
             row_position: 0,
-            col_start: None,
             color_scheme,
             buffer: unsafe { &mut *(VGA_BUF_ADDR as *mut Buffer) } }
     }
 
+    // TODO: Are these `cursor_set_` functions really necessary?
+    pub fn cursor_set_column(&mut self, col: usize) {
+        self.col_position = col;
+    }
+
+    pub fn cursor_set_row(&mut self, row: usize) {
+        self.row_position = row;
+    }
+
+    pub fn cursor_set_position(&mut self, col: usize, row: usize) {
+        self.cursor_set_column(col);
+        self.cursor_set_row(row);
+    }
+
     pub fn clear_line(&mut self, row: usize) {
         for i in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][i].write(
-                CharCell {
-                    character: b' ',
-                    color: self.color_scheme
-                }
-            )
+            self.write_byte(b' ', i, row);
         }
     }
 
@@ -116,6 +113,18 @@ impl Writer {
         for i in 0..BUFFER_HEIGHT {
             self.clear_line(i);
         }
+    }
+
+    pub fn scroll(&mut self) {
+        for row in 1..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                let byte = self.buffer.chars[row][col].read().character;
+                self.write_byte(byte, col, row - 1);
+            }
+        }
+        self.clear_line(BUFFER_HEIGHT - 1);
+        self.col_position = 0;
+        self.row_position = BUFFER_HEIGHT - 1;
     }
 
     /**
@@ -128,15 +137,9 @@ impl Writer {
 
         match byte {
             b'\n' => {
+                // no fancying. we returnin to the zero!
                 self.row_position = row + 1;
-
-                // it's the first time I use something like this so let's explain:
-                // I want to extract the value of self.col_start which is of type
-                // Option. So we do this little magic trick to extract the value
-                // (if there is) into this local col_start and then use it!
-                if let Some(col_start) = self.col_start {
-                    self.col_position = col_start
-                }
+                self.col_position = 0;
             },
             b'\r' => {
                 // the carriage-return char's job is returning to
@@ -153,18 +156,20 @@ impl Writer {
 
                 self.col_position = col + 1;
                 self.row_position = row;
-
-                if self.col_position >= BUFFER_WIDTH {
-                    if self.row_position < BUFFER_HEIGHT {
-                        self.col_position = 0;
-                        self.row_position += 1;
-                    } else {
-                        /* TODO: handle new line scroll and that stuff */
-                    }
-                }
             },
 
             /* handle other chars... */
+        }
+
+        // TODO: shouldn't be checked for all bytes.
+        // There are bytes that just don't affect the cursor
+        if self.col_position >= BUFFER_WIDTH && self.row_position < BUFFER_HEIGHT {
+            self.col_position = 0;
+            self.row_position += 1;
+        }
+
+        if self.row_position >= BUFFER_HEIGHT {
+            self.scroll();
         }
     }
 
@@ -187,7 +192,6 @@ impl Writer {
     pub fn print_string_at(&mut self, string: &str, col: usize, row: usize) {
         self.col_position = col;
         self.row_position = row;
-        self.col_start = Some(col);
 
         for byte in string.as_bytes() {
             match byte {
@@ -199,8 +203,6 @@ impl Writer {
                 }
             }
         }
-        // we're done with monopolizing and colonizing this variable
-        self.col_start = None;
     }
 
     /**

@@ -4,26 +4,23 @@
 mod vga_buffer;
 mod types;
 
-use core::panic::PanicInfo;
 use core::fmt::Write;
-use crate::vga_buffer::{Color, ColorCode, Writer};
+use core::panic::PanicInfo;
+use crate::vga_buffer::WRITER;
 
 const AMROS_HEADER_MSG: &str = "AmrOS - v0.1.0";
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    let mut writer = Writer::new(ColorCode::new(Color::White, Color::Black));
+    WRITER.lock().print_string_hcenter(AMROS_HEADER_MSG, 0);
+    // reset the cursor position because of the header message
+    WRITER.lock().cursor_set_position(0, 2);
 
-    writer.print_string_hcenter(AMROS_HEADER_MSG, 0);
-
-    /* to test scrolling
-    for i in 0..35 {
-        write!(writer, "This is line {i}").unwrap();
+    for i in 0..100 {
+        writeln!(WRITER.lock(), "line {i}").unwrap();
     }
-    */
 
-    #[allow(clippy::empty_loop)]
-    loop {} // Clippy gets angry cuz we're "wasting" CPU cycles
+    loop {}
 
     // for now we loop. in the future we should
     // implement something to power off or idk

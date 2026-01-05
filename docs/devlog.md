@@ -431,3 +431,61 @@ If I **EVER** have to do that, it's the user-space program that will handle that
 only job is displaying text with a few helper functions. That's it.
 
 So I will stop stupid-ing around and get some real stuff going.
+
+
+## [05/01/2026]
+
+### Back to school
+
+School is back so I won't have as much time as I had to work on this project (I am currently writing
+this log while I have a math homework).
+So, what I think I'll do (cuz yes) is brainstorming in class (gotta pay attention to the teacher, of course)
+and come up with ideas and useful thoughts for this project, then when I get home I can implement them
+or search about it more.
+
+### NO FANCYING
+
+Alright; there is an Arabic saying that says: "The donkey philosophed then died of hunger".
+That saying is said when someone thinks too much just to do something
+the wrong way or that thinking turns out useless.
+
+So: I tried coding fancy line-returns but to be honest and realistic: this is my OS' shell.
+If I ever want that kind of fancy stuff, I either have to port bash or code it as some user-space
+stuff, not implemented in my very young shell while I, well: **LITERALLY HAVE NOTHING EXCEPT
+MY VGA-BUFFER HELPERS!!!**
+
+So, for short: a new line will return to the column 0. As simple as that.
+
+---
+
+By the way, the `Writer` struct looked like this before I removed the "fancy new-line":
+
+```rust
+pub struct Writer {
+    /** Keeps track of the horizontal position of the *imaginary* cursor */
+    col_position: usize, 
+    row_position: usize,
+    /**
+    *   This one is tricky:
+    *   There multiple contexts when printing a new-line.
+    *   Maybe we're printing a character at a specific position and we'd like
+    *   to return to the column we started printing from when encountering
+    *   a new-line character.
+    *   Maybe we're printing a string at another position and we'd like to have
+    *   our new line starting horizontally at where the previous line started.
+    *
+    *   So this variable is used to keep track of the column position the function
+    *   started printing from. All for the purpose of correct new-lines...
+    *
+    *   It's of type `Option` to check if `write_byte` is being used or not.
+    *   If it is then this variable's value is `None`.
+    *   Other functions must set this variable to something before using any
+    *   internal print function like `print_char` or `write_byte`, then when done
+    *   set the value back to `None`.
+    */
+    col_start: Option<usize>,
+    /** Color used by everything printed by this writer */
+    color_scheme: ColorCode, 
+    buffer: &'static mut Buffer
+}
+```
